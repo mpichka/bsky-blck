@@ -68,38 +68,42 @@ export function SearchInput(props: Props) {
         <Col>
           <Form.Check
             type="checkbox"
-            id="includeLikes"
-            label="Include users who like this post"
-            onChange={handleCheckChange}
-          />
-          <Form.Check
-            type="checkbox"
-            id="includeReposts"
-            label="Include users who reposted this post"
-            onChange={handleCheckChange}
-          />
-          <Form.Check
-            type="checkbox"
             id="includeAuthorFollowers"
             label="Include the author's followers"
             onChange={handleCheckChange}
           />
           <Form.Check
             type="checkbox"
-            id="includeLikesFollowers"
-            label="Include followers of users who like this post (slow!)"
+            id="includeLikes"
+            label="Include users who like this post"
             onChange={handleCheckChange}
           />
+          {formData.includeLikes && (
+            <Form.Check
+              type="checkbox"
+              id="includeLikesFollowers"
+              label="Include followers of users who like this post (slow!)"
+              onChange={handleCheckChange}
+            />
+          )}
           <Form.Check
             type="checkbox"
-            id="includeRepostFollowers"
-            label="Include followers of users who reposted this post (slow!)"
+            id="includeReposts"
+            label="Include users who reposted this post"
             onChange={handleCheckChange}
           />
+          {formData.includeReposts && (
+            <Form.Check
+              type="checkbox"
+              id="includeRepostFollowers"
+              label="Include followers of users who reposted this post (slow!)"
+              onChange={handleCheckChange}
+            />
+          )}
           <Form.Check
             type="checkbox"
             id="repeatForAuthor"
-            label="Repeat this action for the author's next 100 posts (slow!)"
+            label="Repeat this action for the author's next 100 posts (very slow!)"
             onChange={handleCheckChange}
           />
           <Form.Check

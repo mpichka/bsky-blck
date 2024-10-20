@@ -20,6 +20,8 @@ export default function App() {
   const postLikesRef = useRef(new Map<string, string>());
   const postRepostRef = useRef(new Map<string, string>());
   const authorFollowersRef = useRef(new Map<string, string>());
+  const likesFollowersRef = useRef(new Map<string, string>());
+  const repostsFollowersRef = useRef(new Map<string, string>());
   const [totalCount, setTotalCount] = useState(0);
   const [blockCount, setBlockCount] = useState(0);
   const [logs, setLogs] = useState("");
@@ -52,6 +54,10 @@ export default function App() {
     if (formData.includeAuthorFollowers) await addAuthorFollowers();
     if (formData.includeLikes) await addPostLikes();
     if (formData.includeReposts) await addPostReposts();
+    if (formData.includeLikesFollowers) await addPostLikesFollowers();
+    if (formData.includeRepostFollowers) await addPostRepostsFollowers();
+    if (formData.repeatForAuthor) console.log("TODO: repeatForAuthor");
+    if (formData.createBlockList) console.log("TODO: createBlockList");
 
     setLoading(false);
   };
@@ -177,6 +183,64 @@ export default function App() {
 
         cursor = postLikesRes.data?.cursor;
         if (!cursor || postLikesRes.data?.repostedBy?.length) break;
+      }
+    }
+  }
+
+  async function addPostLikesFollowers() {
+    if (postLikesRef.current) {
+      log("===== [Fetching post likes followers]");
+      for (const userDid of postLikesRef.current.values()) {
+        let cursor: string | undefined;
+        while (true) {
+          const followersRes = await bskyRef.current.getAuthorFollowers(
+            userDid,
+            cursor
+          );
+
+          if (followersRes.error) {
+            logError(followersRes.error);
+            break;
+          }
+
+          followersRes.data?.followers.forEach((follower) => {
+            likesFollowersRef.current.set(follower.handle, follower.did);
+            log(follower.handle);
+            setTotalCount((prev) => prev + 1);
+          });
+
+          cursor = followersRes.data?.cursor;
+          if (!cursor || !followersRes.data?.followers.length) break;
+        }
+      }
+    }
+  }
+
+  async function addPostRepostsFollowers() {
+    if (postRepostRef.current) {
+      log("===== [Fetching post reposts followers]");
+      for (const userDid of postRepostRef.current.values()) {
+        let cursor: string | undefined;
+        while (true) {
+          const followersRes = await bskyRef.current.getAuthorFollowers(
+            userDid,
+            cursor
+          );
+
+          if (followersRes.error) {
+            logError(followersRes.error);
+            break;
+          }
+
+          followersRes.data?.followers.forEach((follower) => {
+            repostsFollowersRef.current.set(follower.handle, follower.did);
+            log(follower.handle);
+            setTotalCount((prev) => prev + 1);
+          });
+
+          cursor = followersRes.data?.cursor;
+          if (!cursor || !followersRes.data?.followers.length) break;
+        }
       }
     }
   }
