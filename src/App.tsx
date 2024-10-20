@@ -300,13 +300,40 @@ export default function App() {
       }
     }
 
-
     setLoading(false);
   }
 
   async function executeCreationOfBlockList() {
     setLoading(true);
-    log(`Blocking`);
+    const session = JSON.parse(
+      sessionStorage.getItem("session")!
+    ) as AuthenticationResponse;
+
+    log(`Creating block list...`);
+
+    const blockList = await bskyRef.current.createModerationList(session);
+
+    if (blockList.data) {
+      const listUri = blockList.data.uri;
+
+      for (const did of totalCount.values()) {
+        const blockRes = await bskyRef.current.addUserToTheModerationList(
+          did,
+          listUri,
+          session
+        );
+        if (blockRes.data) {
+          addToBlockCount(did);
+        } else {
+          logError(blockRes.error);
+        }
+      }
+
+      log(`"${session.handle}'s moderation list" was created`);
+    } else {
+      return logError(blockList.error);
+    }
+
     setLoading(false);
   }
 

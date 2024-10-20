@@ -594,3 +594,16 @@ export interface Follower {
   labels: Label[];
   createdAt: Date;
 }
+
+
+export interface NewListResponse {
+  uri: string;
+  cid: string;
+  commit: Commit;
+  validationStatus: string;
+}
+
+export interface Commit {
+  cid: string;
+  rev: string;
+}

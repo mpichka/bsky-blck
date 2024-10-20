@@ -5,6 +5,7 @@ import type {
   AuthorResponse,
   FollowersResponse,
   LikesResponse,
+  NewListResponse,
   RepostsResponse,
 } from "./types";
 
@@ -89,17 +90,63 @@ export class Bsky {
   }
 
   async blockUser(did: string, session: AuthenticationResponse) {
-    return await fetch.post("https://bsky.social/xrpc/com.atproto.repo.createRecord", {
-      authorization: session.accessJwt,
-      body: {
-        collection: "app.bsky.graph.block",
-        repo: session.did,
-        record: {
-          subject: did,
-          createdAt: new Date().toISOString(),
-          $type: "app.bsky.graph.block",
+    return await fetch.post(
+      "https://bsky.social/xrpc/com.atproto.repo.createRecord",
+      {
+        authorization: session.accessJwt,
+        body: {
+          collection: "app.bsky.graph.block",
+          repo: session.did,
+          record: {
+            subject: did,
+            createdAt: new Date().toISOString(),
+            $type: "app.bsky.graph.block",
+          },
         },
-      },
-    });
+      }
+    );
+  }
+
+  async createModerationList(session: AuthenticationResponse) {
+    return await fetch.post<NewListResponse>(
+      "https://bsky.social/xrpc/com.atproto.repo.createRecord",
+      {
+        authorization: session.accessJwt,
+        body: {
+          collection: "app.bsky.graph.list",
+          repo: session.did,
+          record: {
+            purpose: "app.bsky.graph.defs#modlist",
+            name: session.handle + "'s moderation list",
+            description: "Created with https://blsky-chainblock.vercel.app/",
+            createdAt: new Date().toISOString(),
+            $type: "app.bsky.graph.list",
+          },
+        },
+      }
+    );
+  }
+
+  async addUserToTheModerationList(
+    did: string,
+    listUri: string,
+    session: AuthenticationResponse
+  ) {
+    return await fetch.post(
+      "https://bsky.social/xrpc/com.atproto.repo.createRecord",
+      {
+        authorization: session.accessJwt,
+        body: {
+          collection: "app.bsky.graph.listitem",
+          repo: session.did,
+          record: {
+            subject: did,
+            list: listUri,
+            createdAt: new Date().toISOString(),
+            $type: "app.bsky.graph.listitem",
+          },
+        },
+      }
+    );
   }
 }
