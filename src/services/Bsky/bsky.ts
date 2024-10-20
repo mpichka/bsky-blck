@@ -10,7 +10,6 @@ import type {
 
 export class Bsky {
   LIMIT = 100;
-
   async authenticate(handle: string, pass: string) {
     return await fetch.post<AuthenticationResponse>(
       "https://bsky.social/xrpc/com.atproto.server.createSession",
@@ -50,10 +49,7 @@ export class Bsky {
     );
   }
 
-  async getAuthorFeed(
-    did: string,
-    cursor: string | undefined = undefined
-  ) {
+  async getAuthorFeed(did: string, cursor: string | undefined = undefined) {
     return await fetch.get<AuthorFeedResponse>(
       "https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed",
       {
@@ -66,10 +62,7 @@ export class Bsky {
     );
   }
 
-  async getPostLikes(
-    uri: string,
-    cursor: string | undefined = undefined
-  ) {
+  async getPostLikes(uri: string, cursor: string | undefined = undefined) {
     return await fetch.get<LikesResponse>(
       "https://public.api.bsky.app/xrpc/app.bsky.feed.getLikes",
       {
@@ -82,10 +75,7 @@ export class Bsky {
     );
   }
 
-  async getPostReposts(
-    uri: string,
-    cursor: string | undefined = undefined
-  ) {
+  async getPostReposts(uri: string, cursor: string | undefined = undefined) {
     return await fetch.get<RepostsResponse>(
       "https://public.api.bsky.app/xrpc/app.bsky.feed.getRepostedBy",
       {
@@ -96,5 +86,20 @@ export class Bsky {
         },
       }
     );
+  }
+
+  async blockUser(did: string, session: AuthenticationResponse) {
+    return await fetch.post("https://bsky.social/xrpc/com.atproto.repo.createRecord", {
+      authorization: session.accessJwt,
+      body: {
+        collection: "app.bsky.graph.block",
+        repo: session.did,
+        record: {
+          subject: did,
+          createdAt: new Date().toISOString(),
+          $type: "app.bsky.graph.block",
+        },
+      },
+    });
   }
 }

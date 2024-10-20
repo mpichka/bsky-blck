@@ -37,12 +37,18 @@ export function LoginForm(props: Props) {
 
   const submitForm = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    authenticate(formData.handle, formData.password)
-      .then((data) => {
-        sessionStorage.setItem("session", JSON.stringify(data));
-        setAuthenticated(true);
+    authenticate(formData.handle.trim(), formData.password.trim())
+      .then((res) => {
+        if (res.data) {
+          sessionStorage.setItem("session", JSON.stringify(res.data));
+          setAuthenticated(true);
+        } else {
+          setError(res.error?.message || res.error);
+          sessionStorage.removeItem("session");
+          setAuthenticated(false);
+        }
       })
-      .catch((error) => {
+      .catch(({ error }) => {
         setError(error?.message || error);
         sessionStorage.removeItem("session");
         setAuthenticated(false);
@@ -50,7 +56,7 @@ export function LoginForm(props: Props) {
   };
 
   return (
-    <Container className='mb-5'>
+    <Container className="mb-5">
       <Form onSubmit={submitForm}>
         <Row>
           <Col>

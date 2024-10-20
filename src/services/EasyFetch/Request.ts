@@ -52,18 +52,15 @@ export class Request {
   }
 
   private static async execute<T>(payload: Payload): Promise<Response<T>> {
-    const { endpoint, method, body, query } = payload;
+    const { endpoint, method, body, query, authorization } = payload;
 
     const requestOptions: RequestOptions = {
       method: method,
       headers: { "Content-Type": "application/json" },
     };
 
-    const session = localStorage.getItem("session");
-    if (session) {
-      const parsedSession = JSON.parse(session);
-      if (parsedSession && parsedSession.accessToken)
-        requestOptions.headers.authorization = `Bearer ${parsedSession.accessToken}`;
+    if (authorization) {
+      requestOptions.headers.authorization = `Bearer ${authorization}`;
     }
 
     if (body) requestOptions.body = JSON.stringify(body);

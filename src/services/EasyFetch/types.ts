@@ -12,11 +12,13 @@ export type RequestOptions = {
 export type Payload = {
   endpoint: string;
   method: (typeof Method)[keyof typeof Method];
+  authorization?: string;
   body?: Record<string, unknown>;
   query?: Record<string, unknown>;
 };
 
 export type LightweightPayload = {
+  authorization?: string;
   body?: Record<string, unknown>;
   query?: Record<string, unknown>;
 };

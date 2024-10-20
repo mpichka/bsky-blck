@@ -1,4 +1,4 @@
-import { type MutableRefObject, useRef, useState } from "react";
+import { type MutableRefObject, useEffect, useRef, useState } from "react";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
@@ -8,7 +8,12 @@ import { LoginForm } from "./components/LoginForm";
 import { LogoutButton } from "./components/LogoutButton";
 import { LogsOutput } from "./components/Output";
 import { SearchInput, SearchInputFormData } from "./components/SearchInput";
-import { AuthorResponse, Bsky, Post } from "./services/Bsky";
+import {
+  AuthenticationResponse,
+  AuthorResponse,
+  Bsky,
+  Post,
+} from "./services/Bsky";
 import { parseSearchString } from "./utils/parseSearchString";
 
 export default function App() {
@@ -22,12 +27,21 @@ export default function App() {
   const authorFollowersRef = useRef(new Map<string, string>());
   const likesFollowersRef = useRef(new Map<string, string>());
   const repostsFollowersRef = useRef(new Map<string, string>());
-  const [totalCount, setTotalCount] = useState(new Set());
+  const [totalCount, setTotalCount] = useState(new Set<string>());
+  const [blockCount, setBlockCount] = useState(new Set<string>());
   const [logs, setLogs] = useState("");
   const [isAuthenticated, setAuthenticated] = useState(
     Boolean(sessionStorage.getItem("session"))
   );
   const [isLoading, setLoading] = useState(false);
+  const [createBlockList, setCreateBlockList] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && totalCount.size && !blockCount.size) {
+      if (createBlockList) executeCreationOfBlockList();
+      else executeSimpleBlocks();
+    }
+  }, [isLoading, totalCount, createBlockList, blockCount]);
 
   const log = (message: string) => {
     setLogs((prevLog) => prevLog + message + "\n");
@@ -37,14 +51,19 @@ export default function App() {
     setLogs((prevLog) => "ERROR: " + prevLog + error?.message || error + "\n");
   };
 
-  const addToTotalCount = (did) => {
+  const addToTotalCount = (did: string) => {
     setTotalCount((previousState) => new Set([...previousState, did]));
+  };
+
+  const addToBlockCount = (did: string) => {
+    setBlockCount((previousState) => new Set([...previousState, did]));
   };
 
   const handleChainBlock = async (formData: SearchInputFormData) => {
     setLoading(true);
     setTotalCount(new Set());
     setLogs(() => "");
+    setCreateBlockList(formData.createBlockList);
 
     if (!formData.linkToPost) {
       setLoading(false);
@@ -61,8 +80,6 @@ export default function App() {
     if (formData.includeRepostFollowers)
       await addPostRepostsFollowers(authorPostRef.current);
     if (formData.repeatForAuthor) await repeatForAuthor(formData);
-    if (formData.createBlockList) await executeSimpleBlock();
-    else await createBlockList();
 
     setLoading(false);
   };
@@ -267,9 +284,31 @@ export default function App() {
     }
   }
 
-  async function executeSimpleBlock() {}
+  async function executeSimpleBlocks() {
+    setLoading(true);
+    const session = JSON.parse(
+      sessionStorage.getItem("session")!
+    ) as AuthenticationResponse;
 
-  async function createBlockList() {}
+    log(`Blocking...`);
+    for (const did of totalCount.values()) {
+      const blockRes = await bskyRef.current.blockUser(did, session);
+      if (blockRes.data) {
+        addToBlockCount(did);
+      } else {
+        logError(blockRes.error);
+      }
+    }
+
+
+    setLoading(false);
+  }
+
+  async function executeCreationOfBlockList() {
+    setLoading(true);
+    log(`Blocking`);
+    setLoading(false);
+  }
 
   return (
     <div>
@@ -297,13 +336,14 @@ export default function App() {
       )}
 
       <SearchInput
-        onSubmit={handleChainBlock}
         isAuthenticated={isAuthenticated}
+        isLoading={isLoading}
+        onSubmit={handleChainBlock}
       />
       <Counter
         isLoading={isLoading}
         totalCount={totalCount.size}
-        blockCount={0}
+        blockCount={blockCount.size}
       />
       <LogsOutput logs={logs} />
     </div>
