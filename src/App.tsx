@@ -3,22 +3,183 @@ import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
 import Row from "react-bootstrap/Row";
+import { Counter } from "./components/Counter";
 import { LoginForm } from "./components/LoginForm";
 import { LogoutButton } from "./components/LogoutButton";
 import { LogsOutput } from "./components/Output";
 import { SearchInput, SearchInputFormData } from "./components/SearchInput";
-import { Bsky } from "./services/Bsky";
+import { AuthorResponse, Bsky, Post } from "./services/Bsky";
+import { parseSearchString } from "./utils/parseSearchString";
 
 export default function App() {
   const bskyRef: MutableRefObject<Bsky> = useRef(new Bsky());
 
+  // Map<handle, did>
+  const authorRef = useRef<AuthorResponse | null>(null);
+  const authorPostRef = useRef<Post | null>(null);
+  const postLikesRef = useRef(new Map<string, string>());
+  const postRepostRef = useRef(new Map<string, string>());
+  const authorFollowersRef = useRef(new Map<string, string>());
+  const [totalCount, setTotalCount] = useState(0);
+  const [blockCount, setBlockCount] = useState(0);
+  const [logs, setLogs] = useState("");
   const [isAuthenticated, setAuthenticated] = useState(
     Boolean(sessionStorage.getItem("session"))
   );
+  const [isLoading, setLoading] = useState(false);
 
-  const handleChainBlock = (formData: SearchInputFormData) => {
-    console.log(formData);
+  const log = (message: string) => {
+    setLogs((prevLog) => prevLog + message + "\n");
   };
+
+  const logError = ({ error }) => {
+    setLogs((prevLog) => "ERROR: " + prevLog + error?.message || error + "\n");
+  };
+
+  const handleChainBlock = async (formData: SearchInputFormData) => {
+    setLoading(true);
+    setTotalCount(0);
+    setBlockCount(0);
+    setLogs(() => "");
+
+    if (!formData.linkToPost) {
+      setLoading(false);
+      return log("Search string is empty!");
+    }
+
+    await addAuthor(formData);
+
+    if (formData.includeAuthorFollowers) await addAuthorFollowers();
+    if (formData.includeLikes) await addPostLikes();
+    if (formData.includeReposts) await addPostReposts();
+
+    setLoading(false);
+  };
+
+  async function addAuthor(formData: SearchInputFormData) {
+    const starterPoint = parseSearchString(formData.linkToPost);
+
+    log("===== [Fetching author]");
+    const authorRes = await bskyRef.current.getAuthor(starterPoint.author);
+    if (!authorRes.data) {
+      return logError(authorRes.error);
+    } else {
+      authorRef.current = authorRes.data;
+      log(authorRes.data.handle);
+      setTotalCount((prev) => prev + 1);
+    }
+
+    if (
+      formData.includeLikes ||
+      formData.includeLikesFollowers ||
+      formData.includeReposts ||
+      formData.includeRepostFollowers
+    ) {
+      log("===== [Fetching author post]");
+      let cursor: string | undefined;
+      while (true) {
+        const postsRes = await bskyRef.current.getAuthorFeed(
+          authorRef.current.did,
+          cursor
+        );
+
+        if (!postsRes.data) {
+          logError(postsRes.error);
+          break;
+        } else {
+          authorPostRef.current =
+            postsRes.data.feed.find(
+              (feedItem) =>
+                feedItem.post.uri.split("/").pop() === starterPoint.postId
+            )?.post || null;
+        }
+
+        cursor = postsRes.data?.cursor;
+        if (!cursor || authorPostRef.current) break;
+      }
+    }
+  }
+
+  async function addAuthorFollowers() {
+    if (authorRef.current) {
+      log("===== [Fetching author followers]");
+      let cursor: string | undefined;
+      while (true) {
+        const followersRes = await bskyRef.current.getAuthorFollowers(
+          authorRef.current.did,
+          cursor
+        );
+
+        if (followersRes.error) {
+          logError(followersRes.error);
+          break;
+        }
+
+        followersRes.data?.followers.forEach((follower) => {
+          authorFollowersRef.current.set(follower.handle, follower.did);
+          log(follower.handle);
+          setTotalCount((prev) => prev + 1);
+        });
+
+        cursor = followersRes.data?.cursor;
+        if (!cursor || !followersRes.data?.followers.length) break;
+      }
+    }
+  }
+
+  async function addPostLikes() {
+    if (authorPostRef.current) {
+      log("===== [Fetching post likes]");
+      let cursor: string | undefined;
+      while (true) {
+        const postLikesRes = await bskyRef.current.getPostLikes(
+          authorPostRef.current.uri,
+          cursor
+        );
+
+        if (!postLikesRes.data) {
+          logError(postLikesRes.error);
+          break;
+        } else {
+          postLikesRes.data.likes.forEach((like) => {
+            postLikesRef.current.set(like.actor.handle, like.actor.did);
+            log(like.actor.handle);
+            setTotalCount((prev) => prev + 1);
+          });
+        }
+
+        cursor = postLikesRes.data?.cursor;
+        if (!cursor || postLikesRes.data?.likes?.length) break;
+      }
+    }
+  }
+
+  async function addPostReposts() {
+    if (authorPostRef.current) {
+      log("===== [Fetching post reposts]");
+      let cursor: string | undefined;
+      while (true) {
+        const postLikesRes = await bskyRef.current.getPostReposts(
+          authorPostRef.current.uri,
+          cursor
+        );
+
+        if (!postLikesRes.data) {
+          logError(postLikesRes.error);
+          break;
+        } else {
+          postLikesRes.data.repostedBy.forEach((repost) => {
+            postRepostRef.current.set(repost.handle, repost.did);
+            log(repost.handle);
+            setTotalCount((prev) => prev + 1);
+          });
+        }
+
+        cursor = postLikesRes.data?.cursor;
+        if (!cursor || postLikesRes.data?.repostedBy?.length) break;
+      }
+    }
+  }
 
   return (
     <div>
@@ -49,7 +210,12 @@ export default function App() {
         onSubmit={handleChainBlock}
         isAuthenticated={isAuthenticated}
       />
-      <LogsOutput />
+      <Counter
+        isLoading={isLoading}
+        totalCount={totalCount}
+        blockCount={blockCount}
+      />
+      <LogsOutput logs={logs} />
     </div>
   );
 }

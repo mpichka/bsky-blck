@@ -72,6 +72,7 @@ export class Request {
     if (query) {
       const queryParams: [string, any][] = [];
       for (const [key, value] of Object.entries(query)) {
+        if (value === undefined) continue;
         if (Array.isArray(value))
           value.forEach((item) => queryParams.push([`${key}[]`, item]));
         else queryParams.push([key, value]);

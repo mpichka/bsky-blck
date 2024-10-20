@@ -28,7 +28,7 @@ type SuccessResponse<T> = {
 
 type ErrorResponse = {
   data: null;
-  error: unknown;
+  error: any;
 };
 
 export type Response<T> = SuccessResponse<T> | ErrorResponse;
