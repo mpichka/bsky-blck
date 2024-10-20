@@ -50,7 +50,7 @@ export function LoginForm(props: Props) {
   };
 
   return (
-    <Container>
+    <Container className='mb-5'>
       <Form onSubmit={submitForm}>
         <Row>
           <Col>

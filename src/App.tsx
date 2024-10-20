@@ -1,12 +1,12 @@
 import { type MutableRefObject, useRef, useState } from "react";
-import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
 import Row from "react-bootstrap/Row";
 import { LoginForm } from "./components/LoginForm";
 import { LogoutButton } from "./components/LogoutButton";
-import { SearchInput } from "./components/SearchInput";
+import { LogsOutput } from "./components/Output";
+import { SearchInput, SearchInputFormData } from "./components/SearchInput";
 import { Bsky } from "./services/Bsky";
 
 export default function App() {
@@ -16,9 +16,13 @@ export default function App() {
     Boolean(sessionStorage.getItem("session"))
   );
 
+  const handleChainBlock = (formData: SearchInputFormData) => {
+    console.log(formData);
+  };
+
   return (
     <div>
-      <Navbar className="bg-body-tertiary navbar" data-bs-theme="dark">
+      <Navbar className="bg-body-tertiary mb-5" data-bs-theme="dark">
         <Container>
           <Navbar.Brand>Bluesky blockchain ⛓</Navbar.Brand>
           {isAuthenticated && (
@@ -40,18 +44,12 @@ export default function App() {
           setAuthenticated={setAuthenticated}
         />
       )}
-      {isAuthenticated && (
-        <>
-          <SearchInput />{" "}
-          <Container>
-            <Row>
-              <Col>
-                <Button variant="danger">Block!</Button>
-              </Col>
-            </Row>
-          </Container>
-        </>
-      )}
+
+      <SearchInput
+        onSubmit={handleChainBlock}
+        isAuthenticated={isAuthenticated}
+      />
+      <LogsOutput />
     </div>
   );
 }
