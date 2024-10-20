@@ -21,7 +21,7 @@ export function Counter(props: Props) {
           )}
           {totalCount !== 0 && (
             <>
-              <span>Found {totalCount} users. </span>
+              <span>Found {totalCount} users </span>
               <span>Blocked {blockCount}. </span>
             </>
           )}

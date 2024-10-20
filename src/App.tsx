@@ -22,8 +22,7 @@ export default function App() {
   const authorFollowersRef = useRef(new Map<string, string>());
   const likesFollowersRef = useRef(new Map<string, string>());
   const repostsFollowersRef = useRef(new Map<string, string>());
-  const [totalCount, setTotalCount] = useState(0);
-  const [blockCount, setBlockCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(new Set());
   const [logs, setLogs] = useState("");
   const [isAuthenticated, setAuthenticated] = useState(
     Boolean(sessionStorage.getItem("session"))
@@ -38,10 +37,13 @@ export default function App() {
     setLogs((prevLog) => "ERROR: " + prevLog + error?.message || error + "\n");
   };
 
+  const addToTotalCount = (did) => {
+    setTotalCount((previousState) => new Set([...previousState, did]));
+  };
+
   const handleChainBlock = async (formData: SearchInputFormData) => {
     setLoading(true);
-    setTotalCount(0);
-    setBlockCount(0);
+    setTotalCount(new Set());
     setLogs(() => "");
 
     if (!formData.linkToPost) {
@@ -52,12 +54,15 @@ export default function App() {
     await addAuthor(formData);
 
     if (formData.includeAuthorFollowers) await addAuthorFollowers();
-    if (formData.includeLikes) await addPostLikes();
-    if (formData.includeReposts) await addPostReposts();
-    if (formData.includeLikesFollowers) await addPostLikesFollowers();
-    if (formData.includeRepostFollowers) await addPostRepostsFollowers();
-    if (formData.repeatForAuthor) console.log("TODO: repeatForAuthor");
-    if (formData.createBlockList) console.log("TODO: createBlockList");
+    if (formData.includeLikes) await addPostLikes(authorPostRef.current);
+    if (formData.includeReposts) await addPostReposts(authorPostRef.current);
+    if (formData.includeLikesFollowers)
+      await addPostLikesFollowers(authorPostRef.current);
+    if (formData.includeRepostFollowers)
+      await addPostRepostsFollowers(authorPostRef.current);
+    if (formData.repeatForAuthor) await repeatForAuthor(formData);
+    if (formData.createBlockList) await executeSimpleBlock();
+    else await createBlockList();
 
     setLoading(false);
   };
@@ -65,14 +70,13 @@ export default function App() {
   async function addAuthor(formData: SearchInputFormData) {
     const starterPoint = parseSearchString(formData.linkToPost);
 
-    log("===== [Fetching author]");
+    log("Fetching author");
     const authorRes = await bskyRef.current.getAuthor(starterPoint.author);
     if (!authorRes.data) {
       return logError(authorRes.error);
     } else {
       authorRef.current = authorRes.data;
-      log(authorRes.data.handle);
-      setTotalCount((prev) => prev + 1);
+      addToTotalCount(authorRes.data.did);
     }
 
     if (
@@ -81,7 +85,7 @@ export default function App() {
       formData.includeReposts ||
       formData.includeRepostFollowers
     ) {
-      log("===== [Fetching author post]");
+      log("Fetching author post");
       let cursor: string | undefined;
       while (true) {
         const postsRes = await bskyRef.current.getAuthorFeed(
@@ -108,7 +112,7 @@ export default function App() {
 
   async function addAuthorFollowers() {
     if (authorRef.current) {
-      log("===== [Fetching author followers]");
+      log("Fetching author followers");
       let cursor: string | undefined;
       while (true) {
         const followersRes = await bskyRef.current.getAuthorFollowers(
@@ -123,8 +127,7 @@ export default function App() {
 
         followersRes.data?.followers.forEach((follower) => {
           authorFollowersRef.current.set(follower.handle, follower.did);
-          log(follower.handle);
-          setTotalCount((prev) => prev + 1);
+          addToTotalCount(follower.did);
         });
 
         cursor = followersRes.data?.cursor;
@@ -133,117 +136,140 @@ export default function App() {
     }
   }
 
-  async function addPostLikes() {
-    if (authorPostRef.current) {
-      log("===== [Fetching post likes]");
+  async function addPostLikes(post: Post | null) {
+    if (!post) return;
+
+    log("Fetching post likes");
+    let cursor: string | undefined;
+    while (true) {
+      const postLikesRes = await bskyRef.current.getPostLikes(post.uri, cursor);
+
+      if (!postLikesRes.data) {
+        logError(postLikesRes.error);
+        break;
+      } else {
+        postLikesRes.data.likes.forEach((like) => {
+          postLikesRef.current.set(like.actor.handle, like.actor.did);
+          addToTotalCount(like.actor.did);
+        });
+      }
+
+      cursor = postLikesRes.data?.cursor;
+      if (!cursor || postLikesRes.data?.likes?.length) break;
+    }
+  }
+
+  async function addPostReposts(post: Post | null) {
+    if (!post) return;
+
+    log("Fetching post reposts");
+    let cursor: string | undefined;
+    while (true) {
+      const postLikesRes = await bskyRef.current.getPostReposts(
+        post.uri,
+        cursor
+      );
+
+      if (!postLikesRes.data) {
+        logError(postLikesRes.error);
+        break;
+      } else {
+        postLikesRes.data.repostedBy.forEach((repost) => {
+          postRepostRef.current.set(repost.handle, repost.did);
+          addToTotalCount(repost.did);
+        });
+      }
+
+      cursor = postLikesRes.data?.cursor;
+      if (!cursor || postLikesRes.data?.repostedBy?.length) break;
+    }
+  }
+
+  async function addPostLikesFollowers(post: Post | null) {
+    if (!post) return;
+
+    log("Fetching post likes followers");
+    for (const userDid of postLikesRef.current.values()) {
       let cursor: string | undefined;
       while (true) {
-        const postLikesRes = await bskyRef.current.getPostLikes(
-          authorPostRef.current.uri,
+        const followersRes = await bskyRef.current.getAuthorFollowers(
+          userDid,
           cursor
         );
 
-        if (!postLikesRes.data) {
-          logError(postLikesRes.error);
+        if (followersRes.error) {
+          logError(followersRes.error);
           break;
-        } else {
-          postLikesRes.data.likes.forEach((like) => {
-            postLikesRef.current.set(like.actor.handle, like.actor.did);
-            log(like.actor.handle);
-            setTotalCount((prev) => prev + 1);
-          });
         }
 
-        cursor = postLikesRes.data?.cursor;
-        if (!cursor || postLikesRes.data?.likes?.length) break;
+        followersRes.data?.followers.forEach((follower) => {
+          likesFollowersRef.current.set(follower.handle, follower.did);
+          addToTotalCount(follower.did);
+        });
+
+        cursor = followersRes.data?.cursor;
+        if (!cursor || !followersRes.data?.followers.length) break;
       }
     }
   }
 
-  async function addPostReposts() {
-    if (authorPostRef.current) {
-      log("===== [Fetching post reposts]");
+  async function addPostRepostsFollowers(post: Post | null) {
+    if (!post) return;
+
+    log("Fetching post reposts followers");
+    for (const userDid of postRepostRef.current.values()) {
       let cursor: string | undefined;
       while (true) {
-        const postLikesRes = await bskyRef.current.getPostReposts(
-          authorPostRef.current.uri,
+        const followersRes = await bskyRef.current.getAuthorFollowers(
+          userDid,
           cursor
         );
 
-        if (!postLikesRes.data) {
-          logError(postLikesRes.error);
+        if (followersRes.error) {
+          logError(followersRes.error);
           break;
-        } else {
-          postLikesRes.data.repostedBy.forEach((repost) => {
-            postRepostRef.current.set(repost.handle, repost.did);
-            log(repost.handle);
-            setTotalCount((prev) => prev + 1);
-          });
         }
 
-        cursor = postLikesRes.data?.cursor;
-        if (!cursor || postLikesRes.data?.repostedBy?.length) break;
+        followersRes.data?.followers.forEach((follower) => {
+          repostsFollowersRef.current.set(follower.handle, follower.did);
+          addToTotalCount(follower.did);
+        });
+
+        cursor = followersRes.data?.cursor;
+        if (!cursor || !followersRes.data?.followers.length) break;
       }
     }
   }
 
-  async function addPostLikesFollowers() {
-    if (postLikesRef.current) {
-      log("===== [Fetching post likes followers]");
-      for (const userDid of postLikesRef.current.values()) {
-        let cursor: string | undefined;
-        while (true) {
-          const followersRes = await bskyRef.current.getAuthorFollowers(
-            userDid,
-            cursor
-          );
+  async function repeatForAuthor(formData: SearchInputFormData) {
+    if (authorRef.current) {
+      const postsRes = await bskyRef.current.getAuthorFeed(
+        authorRef.current.did
+      );
 
-          if (followersRes.error) {
-            logError(followersRes.error);
-            break;
-          }
+      if (!postsRes.data) {
+        logError(postsRes.error);
+      } else {
+        let counter = 1;
+        for (const feed of postsRes.data.feed) {
+          log(`Repeating action... ${counter}/100`);
 
-          followersRes.data?.followers.forEach((follower) => {
-            likesFollowersRef.current.set(follower.handle, follower.did);
-            log(follower.handle);
-            setTotalCount((prev) => prev + 1);
-          });
+          if (formData.includeLikes) await addPostLikes(feed.post);
+          if (formData.includeReposts) await addPostReposts(feed.post);
+          if (formData.includeLikesFollowers)
+            await addPostLikesFollowers(feed.post);
+          if (formData.includeRepostFollowers)
+            await addPostRepostsFollowers(feed.post);
 
-          cursor = followersRes.data?.cursor;
-          if (!cursor || !followersRes.data?.followers.length) break;
+          counter += 1;
         }
       }
     }
   }
 
-  async function addPostRepostsFollowers() {
-    if (postRepostRef.current) {
-      log("===== [Fetching post reposts followers]");
-      for (const userDid of postRepostRef.current.values()) {
-        let cursor: string | undefined;
-        while (true) {
-          const followersRes = await bskyRef.current.getAuthorFollowers(
-            userDid,
-            cursor
-          );
+  async function executeSimpleBlock() {}
 
-          if (followersRes.error) {
-            logError(followersRes.error);
-            break;
-          }
-
-          followersRes.data?.followers.forEach((follower) => {
-            repostsFollowersRef.current.set(follower.handle, follower.did);
-            log(follower.handle);
-            setTotalCount((prev) => prev + 1);
-          });
-
-          cursor = followersRes.data?.cursor;
-          if (!cursor || !followersRes.data?.followers.length) break;
-        }
-      }
-    }
-  }
+  async function createBlockList() {}
 
   return (
     <div>
@@ -276,8 +302,8 @@ export default function App() {
       />
       <Counter
         isLoading={isLoading}
-        totalCount={totalCount}
-        blockCount={blockCount}
+        totalCount={totalCount.size}
+        blockCount={0}
       />
       <LogsOutput logs={logs} />
     </div>
