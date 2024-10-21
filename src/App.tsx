@@ -343,7 +343,6 @@ export default function App() {
         totalCount={totalCount.size}
         blockCount={blockCount.size}
       />
-      <LogsOutput logs={logs} />
     </div>
   );
 }
