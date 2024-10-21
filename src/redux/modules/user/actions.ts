@@ -7,4 +7,7 @@ export const LOGIN = "LOGIN";
 export const login = (payload: LoginPayload) => ({ type: LOGIN, payload });
 
 export const LOGOUT = "LOGOUT";
-export const logout = () => ({ type: LOGIN });
+export const logout = () => ({ type: LOGOUT });
+
+export const INITIALIZE = "INITIALIZE";
+export const init = () => ({ type: INITIALIZE });

@@ -1,5 +1,5 @@
 import { Action } from "../../types";
-import { CLEAR_USER, LOGIN, LOGOUT, SET_USER } from "./actions";
+import { CLEAR_USER, INITIALIZE, LOGIN, LOGOUT, SET_USER } from "./actions";
 import type { UserState } from "./type";
 
 const initialState: UserState = {
@@ -13,6 +13,8 @@ export function user(state = initialState, action: Action): UserState {
     case LOGIN:
     case LOGOUT:
       return { ...initialState, loading: true };
+    case INITIALIZE:
+      return { ...initialState, initialized: true, loading: true };
     case SET_USER:
       return {
         data: action.payload,
@@ -20,7 +22,7 @@ export function user(state = initialState, action: Action): UserState {
         initialized: true,
       };
     case CLEAR_USER:
-      return { ...initialState, initialized: true, loading: false };
+      return { data: null, initialized: true, loading: false };
     default:
       return state;
   }

@@ -26,7 +26,7 @@ const mapStateToProps = (store) => ({
 });
 
 const mapDispatchToProps = (dispatch) => ({
-  logout: () => dispatch(logout),
+  logout: () => dispatch(logout()),
 });
 
 const connector = connect(mapStateToProps, mapDispatchToProps);

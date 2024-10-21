@@ -2,7 +2,7 @@ import { combineEpics, ofType } from "redux-observable";
 import { catchError, from, map, of, switchMap, throttleTime } from "rxjs";
 import { Bsky } from "../../../services/Bsky";
 import type { EpicAction } from "../../types";
-import { CLEAR_USER, LOGIN, LOGOUT, SET_USER } from "./actions";
+import { CLEAR_USER, INITIALIZE, LOGIN, LOGOUT, SET_USER } from "./actions";
 
 const THROTTLE_TIME = 200;
 
@@ -45,6 +45,25 @@ const loginEpic = (action$: EpicAction) =>
     })
   );
 
+const initializeEpic = (action$: EpicAction) =>
+  action$.pipe(
+    ofType(INITIALIZE),
+    map(() => {
+      const session = JSON.parse(sessionStorage.getItem("session")!);
+
+      if (session) {
+        return {
+          type: SET_USER,
+          payload: session,
+        };
+      } else {
+        return {
+          type: CLEAR_USER,
+        };
+      }
+    })
+  );
+
 const logoutEpic = (action$: EpicAction) =>
   action$.pipe(
     ofType(LOGOUT),
@@ -56,4 +75,4 @@ const logoutEpic = (action$: EpicAction) =>
     })
   );
 
-export const userEpics = combineEpics(loginEpic, logoutEpic);
+export const userEpics = combineEpics(loginEpic, initializeEpic, logoutEpic);
