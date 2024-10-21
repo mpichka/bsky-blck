@@ -115,18 +115,6 @@ export interface AuthorResponse {
   pinnedPost: PinnedPost;
 }
 
-export interface Associated {
-  lists: number;
-  feedgens: number;
-  starterPacks: number;
-  labeler: boolean;
-  chat: Chat;
-}
-
-export interface Chat {
-  allowIncoming: string;
-}
-
 export interface JoinedViaStarterPack {
   uri: string;
   cid: string;
@@ -150,18 +138,6 @@ export interface Creator {
   createdAt: Date;
 }
 
-export interface Label {
-  ver: number;
-  src: string;
-  uri: string;
-  cid: string;
-  val: string;
-  neg: boolean;
-  cts: Date;
-  exp: Date;
-  sig: string;
-}
-
 export interface CreatorViewer {
   muted: boolean;
   mutedByList: ByList;
@@ -171,23 +147,6 @@ export interface CreatorViewer {
   following: string;
   followedBy: string;
   knownFollowers: PurpleKnownFollowers;
-}
-
-export interface ByList {
-  uri: string;
-  cid: string;
-  name: string;
-  purpose: string;
-  avatar: string;
-  listItemCount: number;
-  labels: Label[];
-  viewer: BlockingByListViewer;
-  indexedAt: Date;
-}
-
-export interface BlockingByListViewer {
-  muted: boolean;
-  blocked: string;
 }
 
 export interface PurpleKnownFollowers {
@@ -232,28 +191,29 @@ export interface Threadgate {
 export interface List {
   uri: string;
   cid: string;
+  creator?: Creator;
   name: string;
   purpose: string;
+  description?: string;
+  descriptionFacets?: DescriptionFacet[];
   avatar: string;
   listItemCount: number;
   labels: Label[];
-  viewer: Viewer;
+  viewer: ListViewer;
   indexedAt: Date;
 }
 
-export interface Label {
-  ver: number;
-  src: string;
-  uri: string;
-  cid: string;
-  val: string;
-  neg: boolean;
-  cts: Date;
-  exp: Date;
-  sig: string;
+export interface DescriptionFacet {
+  index: Index;
+  features: any[];
 }
 
-export interface Viewer {
+export interface Index {
+  byteStart: number;
+  byteEnd: number;
+}
+
+export interface ListViewer {
   muted: boolean;
   blocked: string;
 }
@@ -283,30 +243,6 @@ export interface Author {
   viewer: AuthorViewer;
   labels: Label[];
   createdAt: Date;
-}
-
-export interface Associated {
-  lists: number;
-  feedgens: number;
-  starterPacks: number;
-  labeler: boolean;
-  chat: Chat;
-}
-
-export interface Chat {
-  allowIncoming: string;
-}
-
-export interface Label {
-  ver: number;
-  src: string;
-  uri: string;
-  cid: string;
-  val: string;
-  neg: boolean;
-  cts: Date;
-  exp: Date;
-  sig: string;
 }
 
 export interface AuthorViewer {
@@ -355,30 +291,6 @@ export interface Actor {
   labels: Label[];
 }
 
-export interface Associated {
-  lists: number;
-  feedgens: number;
-  starterPacks: number;
-  labeler: boolean;
-  chat: Chat;
-}
-
-export interface Chat {
-  allowIncoming: string;
-}
-
-export interface Label {
-  ver: number;
-  src: string;
-  uri: string;
-  cid: string;
-  val: string;
-  neg: boolean;
-  cts: Date;
-  exp: Date;
-  sig: string;
-}
-
 export interface ActorViewer {
   muted: boolean;
   mutedByList: ByList;
@@ -388,38 +300,6 @@ export interface ActorViewer {
   following: string;
   followedBy: string;
   knownFollowers: KnownFollowers;
-}
-
-export interface ByList {
-  uri: string;
-  cid: string;
-  name: string;
-  purpose: string;
-  avatar: string;
-  listItemCount: number;
-  labels: Label[];
-  viewer: BlockingByListViewer;
-  indexedAt: Date;
-}
-
-export interface BlockingByListViewer {
-  muted: boolean;
-  blocked: string;
-}
-
-export interface KnownFollowers {
-  count: number;
-  followers: Follower[];
-}
-
-export interface Follower {
-  did: string;
-  handle: string;
-  displayName: string;
-  avatar: string;
-  associated: Associated;
-  labels: Label[];
-  createdAt: Date;
 }
 
 export interface AuthorFeedResponse {
@@ -441,67 +321,6 @@ export interface Feed {
   labels: Label[];
   viewer: FeedViewer;
   indexedAt: Date;
-}
-
-export interface Associated {
-  lists: number;
-  feedgens: number;
-  starterPacks: number;
-  labeler: boolean;
-  chat: Chat;
-}
-
-export interface Chat {
-  allowIncoming: string;
-}
-
-export interface Label {
-  ver: number;
-  src: string;
-  uri: string;
-  cid: string;
-  val: string;
-  neg: boolean;
-  cts: Date;
-  exp: Date;
-  sig: string;
-}
-
-export interface ByList {
-  uri: string;
-  cid: string;
-  name: string;
-  purpose: string;
-  avatar: string;
-  listItemCount: number;
-  labels: Label[];
-  viewer: BlockingByListViewer;
-  indexedAt: Date;
-}
-
-export interface BlockingByListViewer {
-  muted: boolean;
-  blocked: string;
-}
-
-export interface Follower {
-  did: string;
-  handle: string;
-  displayName: string;
-  avatar: string;
-  associated: Associated;
-  labels: Label[];
-  createdAt: Date;
-}
-
-export interface DescriptionFacet {
-  index: Index;
-  features: any[];
-}
-
-export interface Index {
-  byteStart: number;
-  byteEnd: number;
 }
 
 export interface FeedViewer {
@@ -528,30 +347,6 @@ export interface RepostedBy {
   labels: Label[];
 }
 
-export interface Associated {
-  lists: number;
-  feedgens: number;
-  starterPacks: number;
-  labeler: boolean;
-  chat: Chat;
-}
-
-export interface Chat {
-  allowIncoming: string;
-}
-
-export interface Label {
-  ver: number;
-  src: string;
-  uri: string;
-  cid: string;
-  val: string;
-  neg: boolean;
-  cts: Date;
-  exp: Date;
-  sig: string;
-}
-
 export interface RepostedByViewer {
   muted: boolean;
   mutedByList: ByList;
@@ -563,39 +358,6 @@ export interface RepostedByViewer {
   knownFollowers: KnownFollowers;
 }
 
-export interface ByList {
-  uri: string;
-  cid: string;
-  name: string;
-  purpose: string;
-  avatar: string;
-  listItemCount: number;
-  labels: Label[];
-  viewer: BlockingByListViewer;
-  indexedAt: Date;
-}
-
-export interface BlockingByListViewer {
-  muted: boolean;
-  blocked: string;
-}
-
-export interface KnownFollowers {
-  count: number;
-  followers: Follower[];
-}
-
-export interface Follower {
-  did: string;
-  handle: string;
-  displayName: string;
-  avatar: string;
-  associated: Associated;
-  labels: Label[];
-  createdAt: Date;
-}
-
-
 export interface NewListResponse {
   uri: string;
   cid: string;
@@ -606,4 +368,9 @@ export interface NewListResponse {
 export interface Commit {
   cid: string;
   rev: string;
+}
+
+export interface ModerationListResponse {
+  cursor: string;
+  lists: List[];
 }
