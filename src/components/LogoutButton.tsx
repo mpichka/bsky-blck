@@ -1,23 +1,33 @@
 import Button from "react-bootstrap/Button";
+import Spinner from "react-bootstrap/Spinner";
+import { connect, ConnectedProps } from "react-redux";
+import { logout } from "../redux/modules/user/actions";
+import { isAuthorized, isUserLoading } from "../redux/modules/user/selectors";
 
-type Props = {
-  isAuthenticated: boolean;
-  setAuthenticated: (state: boolean) => void;
-};
+type PropsFromRedux = ConnectedProps<typeof connector>;
+type Props = PropsFromRedux;
 
-export function LogoutButton(props: Props) {
-  const { isAuthenticated, setAuthenticated } = props;
+export function LogoutButtonComponent(props: Props) {
+  const { isAuthorized, isLoading, logout } = props;
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("session");
-    setAuthenticated(false);
-  };
-
-  if (!isAuthenticated) return null;
+  if (!isAuthorized) return null;
 
   return (
-    <Button variant="light" onClick={handleLogout}>
+    <Button variant="light" onClick={logout}>
       Logout
+      {isLoading && <Spinner animation="border" size="sm" className="ms-2" />}
     </Button>
   );
 }
+
+const mapStateToProps = (store) => ({
+  isAuthorized: isAuthorized(store),
+  isLoading: isUserLoading(store),
+});
+
+const mapDispatchToProps = (dispatch) => ({
+  logout: () => dispatch(logout),
+});
+
+const connector = connect(mapStateToProps, mapDispatchToProps);
+export const LogoutButton = connector(LogoutButtonComponent);

@@ -5,13 +5,14 @@ import type {
   AuthorResponse,
   FollowersResponse,
   LikesResponse,
+  ModerationListResponse,
   NewListResponse,
   RepostsResponse,
 } from "./types";
 
 export class Bsky {
-  LIMIT = 100;
-  async authenticate(handle: string, pass: string) {
+  private static LIMIT = 100;
+  static async authenticate(handle: string, pass: string) {
     return await fetch.post<AuthenticationResponse>(
       "https://bsky.social/xrpc/com.atproto.server.createSession",
       {
@@ -23,7 +24,7 @@ export class Bsky {
     );
   }
 
-  async getAuthor(handleOrDid: string) {
+  static async getAuthor(handleOrDid: string) {
     return await fetch.get<AuthorResponse>(
       "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile",
       {
@@ -34,7 +35,7 @@ export class Bsky {
     );
   }
 
-  async getAuthorFollowers(
+  static async getAuthorFollowers(
     did: string,
     cursor: string | null | undefined = undefined
   ) {
@@ -50,7 +51,10 @@ export class Bsky {
     );
   }
 
-  async getAuthorFeed(did: string, cursor: string | undefined = undefined) {
+  static async getAuthorFeed(
+    did: string,
+    cursor: string | undefined = undefined
+  ) {
     return await fetch.get<AuthorFeedResponse>(
       "https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed",
       {
@@ -63,7 +67,10 @@ export class Bsky {
     );
   }
 
-  async getPostLikes(uri: string, cursor: string | undefined = undefined) {
+  static async getPostLikes(
+    uri: string,
+    cursor: string | undefined = undefined
+  ) {
     return await fetch.get<LikesResponse>(
       "https://public.api.bsky.app/xrpc/app.bsky.feed.getLikes",
       {
@@ -76,7 +83,10 @@ export class Bsky {
     );
   }
 
-  async getPostReposts(uri: string, cursor: string | undefined = undefined) {
+  static async getPostReposts(
+    uri: string,
+    cursor: string | undefined = undefined
+  ) {
     return await fetch.get<RepostsResponse>(
       "https://public.api.bsky.app/xrpc/app.bsky.feed.getRepostedBy",
       {
@@ -89,7 +99,7 @@ export class Bsky {
     );
   }
 
-  async blockUser(did: string, session: AuthenticationResponse) {
+  static async blockUser(did: string, session: AuthenticationResponse) {
     return await fetch.post(
       "https://bsky.social/xrpc/com.atproto.repo.createRecord",
       {
@@ -107,7 +117,7 @@ export class Bsky {
     );
   }
 
-  async createModerationList(session: AuthenticationResponse) {
+  static async createModerationList(session: AuthenticationResponse) {
     return await fetch.post<NewListResponse>(
       "https://bsky.social/xrpc/com.atproto.repo.createRecord",
       {
@@ -127,7 +137,7 @@ export class Bsky {
     );
   }
 
-  async addUserToTheModerationList(
+  static async addUserToTheModerationList(
     did: string,
     listUri: string,
     session: AuthenticationResponse
@@ -145,6 +155,22 @@ export class Bsky {
             createdAt: new Date().toISOString(),
             $type: "app.bsky.graph.listitem",
           },
+        },
+      }
+    );
+  }
+
+  static async getUserModerationLists(
+    session: AuthenticationResponse,
+    cursor: string | undefined = undefined
+  ) {
+    return await fetch.get<ModerationListResponse>(
+      "https://public.api.bsky.app/xrpc/app.bsky.graph.getLists",
+      {
+        query: {
+          actor: session.did,
+          cursor,
+          limit: this.LIMIT,
         },
       }
     );

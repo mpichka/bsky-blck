@@ -1,4 +1,4 @@
-import { type MutableRefObject, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
@@ -17,8 +17,6 @@ import {
 import { parseSearchString } from "./utils/parseSearchString";
 
 export default function App() {
-  const bskyRef: MutableRefObject<Bsky> = useRef(new Bsky());
-
   // Map<handle, did>
   const authorRef = useRef<AuthorResponse | null>(null);
   const authorPostRef = useRef<Post | null>(null);
@@ -30,9 +28,6 @@ export default function App() {
   const [totalCount, setTotalCount] = useState(new Set<string>());
   const [blockCount, setBlockCount] = useState(new Set<string>());
   const [logs, setLogs] = useState("");
-  const [isAuthenticated, setAuthenticated] = useState(
-    Boolean(sessionStorage.getItem("session"))
-  );
   const [isLoading, setLoading] = useState(false);
   const [createBlockList, setCreateBlockList] = useState(false);
 
@@ -88,7 +83,7 @@ export default function App() {
     const starterPoint = parseSearchString(formData.linkToPost);
 
     log("Fetching author");
-    const authorRes = await bskyRef.current.getAuthor(starterPoint.author);
+    const authorRes = await Bsky.getAuthor(starterPoint.author);
     if (!authorRes.data) {
       return logError(authorRes.error);
     } else {
@@ -105,7 +100,7 @@ export default function App() {
       log("Fetching author post");
       let cursor: string | undefined;
       while (true) {
-        const postsRes = await bskyRef.current.getAuthorFeed(
+        const postsRes = await Bsky.getAuthorFeed(
           authorRef.current.did,
           cursor
         );
@@ -132,7 +127,7 @@ export default function App() {
       log("Fetching author followers");
       let cursor: string | undefined;
       while (true) {
-        const followersRes = await bskyRef.current.getAuthorFollowers(
+        const followersRes = await Bsky.getAuthorFollowers(
           authorRef.current.did,
           cursor
         );
@@ -159,7 +154,7 @@ export default function App() {
     log("Fetching post likes");
     let cursor: string | undefined;
     while (true) {
-      const postLikesRes = await bskyRef.current.getPostLikes(post.uri, cursor);
+      const postLikesRes = await Bsky.getPostLikes(post.uri, cursor);
 
       if (!postLikesRes.data) {
         logError(postLikesRes.error);
@@ -182,10 +177,7 @@ export default function App() {
     log("Fetching post reposts");
     let cursor: string | undefined;
     while (true) {
-      const postLikesRes = await bskyRef.current.getPostReposts(
-        post.uri,
-        cursor
-      );
+      const postLikesRes = await Bsky.getPostReposts(post.uri, cursor);
 
       if (!postLikesRes.data) {
         logError(postLikesRes.error);
@@ -209,10 +201,7 @@ export default function App() {
     for (const userDid of postLikesRef.current.values()) {
       let cursor: string | undefined;
       while (true) {
-        const followersRes = await bskyRef.current.getAuthorFollowers(
-          userDid,
-          cursor
-        );
+        const followersRes = await Bsky.getAuthorFollowers(userDid, cursor);
 
         if (followersRes.error) {
           logError(followersRes.error);
@@ -237,10 +226,7 @@ export default function App() {
     for (const userDid of postRepostRef.current.values()) {
       let cursor: string | undefined;
       while (true) {
-        const followersRes = await bskyRef.current.getAuthorFollowers(
-          userDid,
-          cursor
-        );
+        const followersRes = await Bsky.getAuthorFollowers(userDid, cursor);
 
         if (followersRes.error) {
           logError(followersRes.error);
@@ -260,9 +246,7 @@ export default function App() {
 
   async function repeatForAuthor(formData: SearchInputFormData) {
     if (authorRef.current) {
-      const postsRes = await bskyRef.current.getAuthorFeed(
-        authorRef.current.did
-      );
+      const postsRes = await Bsky.getAuthorFeed(authorRef.current.did);
 
       if (!postsRes.data) {
         logError(postsRes.error);
@@ -292,7 +276,7 @@ export default function App() {
 
     log(`Blocking...`);
     for (const did of totalCount.values()) {
-      const blockRes = await bskyRef.current.blockUser(did, session);
+      const blockRes = await Bsky.blockUser(did, session);
       if (blockRes.data) {
         addToBlockCount(did);
       } else {
@@ -311,13 +295,13 @@ export default function App() {
 
     log(`Creating block list...`);
 
-    const blockList = await bskyRef.current.createModerationList(session);
+    const blockList = await Bsky.createModerationList(session);
 
     if (blockList.data) {
       const listUri = blockList.data.uri;
 
       for (const did of totalCount.values()) {
-        const blockRes = await bskyRef.current.addUserToTheModerationList(
+        const blockRes = await Bsky.addUserToTheModerationList(
           did,
           listUri,
           session
@@ -342,28 +326,15 @@ export default function App() {
       <Navbar className="bg-body-tertiary mb-5" data-bs-theme="dark">
         <Container>
           <Navbar.Brand>Bluesky blockchain ⛓</Navbar.Brand>
-          {isAuthenticated && (
-            <Row>
-              <Col>
-                <LogoutButton
-                  isAuthenticated={isAuthenticated}
-                  setAuthenticated={setAuthenticated}
-                />
-              </Col>
-            </Row>
-          )}
+          <Row>
+            <Col>
+              <LogoutButton />
+            </Col>
+          </Row>
         </Container>
       </Navbar>
-
-      {!isAuthenticated && (
-        <LoginForm
-          authenticate={bskyRef.current.authenticate}
-          setAuthenticated={setAuthenticated}
-        />
-      )}
-
+      <LoginForm />
       <SearchInput
-        isAuthenticated={isAuthenticated}
         isLoading={isLoading}
         onSubmit={handleChainBlock}
       />

@@ -17,13 +17,12 @@ export interface SearchInputFormData {
 }
 
 type Props = {
-  isAuthenticated: boolean;
   isLoading: boolean;
   onSubmit: (formData: SearchInputFormData) => void;
 };
 
 export function SearchInput(props: Props) {
-  const { isAuthenticated, isLoading, onSubmit } = props;
+  const { isLoading, onSubmit } = props;
 
   const [formData, setFormData] = useState<SearchInputFormData>({
     linkToPost: "",
@@ -121,7 +120,7 @@ export function SearchInput(props: Props) {
             className="mt-4"
             variant="danger"
             onClick={() => onSubmit(formData)}
-            disabled={!isAuthenticated || isLoading}
+            disabled={isLoading}
           >
             Block!
           </Button>
