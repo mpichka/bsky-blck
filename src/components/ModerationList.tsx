@@ -25,9 +25,9 @@ function ModerationListComponent(props: Props) {
     user,
     pushToModerationList,
     userModerationList,
-    subscribedModerationList,
+    // subscribedModerationList,
     clearModerationList,
-    pushToSubscribedModerationList,
+    // pushToSubscribedModerationList,
   } = props;
 
   useEffect(() => {
@@ -37,8 +37,8 @@ function ModerationListComponent(props: Props) {
 
   async function loadModerationLists(session) {
     await loadUserModerationList(session);
-    await loadSubscribedBlockList(session);
-    await loadSubscribedMuteList(session);
+    // await loadSubscribedBlockList(session);
+    // await loadSubscribedMuteList(session);
   }
 
   async function loadUserModerationList(session) {
@@ -51,27 +51,27 @@ function ModerationListComponent(props: Props) {
     }
   }
 
-  async function loadSubscribedBlockList(session) {
-    let cursor: string | undefined;
-    while (true) {
-      const listRes = await Bsky.getSubscribedBlockList(session);
-      cursor = listRes.data?.cursor;
-      if (listRes.data?.lists)
-        pushToSubscribedModerationList(listRes.data.lists);
-      if (!listRes.error || !cursor || !listRes.data?.lists) break;
-    }
-  }
+  // async function loadSubscribedBlockList(session) {
+  //   let cursor: string | undefined;
+  //   while (true) {
+  //     const listRes = await Bsky.getSubscribedBlockList(session);
+  //     cursor = listRes.data?.cursor;
+  //     if (listRes.data?.lists)
+  //       pushToSubscribedModerationList(listRes.data.lists);
+  //     if (!listRes.error || !cursor || !listRes.data?.lists) break;
+  //   }
+  // }
 
-  async function loadSubscribedMuteList(session) {
-    let cursor: string | undefined;
-    while (true) {
-      const listRes = await Bsky.getSubscribedMuteList(session);
-      cursor = listRes.data?.cursor;
-      if (listRes.data?.lists)
-        pushToSubscribedModerationList(listRes.data.lists);
-      if (!listRes.error || !cursor || !listRes.data?.lists) break;
-    }
-  }
+  // async function loadSubscribedMuteList(session) {
+  //   let cursor: string | undefined;
+  //   while (true) {
+  //     const listRes = await Bsky.getSubscribedMuteList(session);
+  //     cursor = listRes.data?.cursor;
+  //     if (listRes.data?.lists)
+  //       pushToSubscribedModerationList(listRes.data.lists);
+  //     if (!listRes.error || !cursor || !listRes.data?.lists) break;
+  //   }
+  // }
 
   if (!user) return null;
 
@@ -92,7 +92,7 @@ function ModerationListComponent(props: Props) {
             ))}
           </Accordion>
         </Col>
-        <Col>
+        {/* <Col>
           <h5>Subscribed to moderation lists:</h5>
           <Accordion alwaysOpen>
             {subscribedModerationList.map((item) => (
@@ -105,7 +105,7 @@ function ModerationListComponent(props: Props) {
               </Accordion.Item>
             ))}
           </Accordion>
-        </Col>
+        </Col> */}
       </Row>
     </Container>
   );
