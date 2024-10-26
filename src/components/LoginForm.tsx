@@ -21,7 +21,7 @@ import { LoginPayload } from "../redux/modules/user/type";
 type PropsFromRedux = ConnectedProps<typeof connector>;
 type Props = PropsFromRedux;
 
-export function LoginFormComponent(props: Props) {
+function LoginFormComponent(props: Props) {
   const {
     isAuthorized,
     isLoading,

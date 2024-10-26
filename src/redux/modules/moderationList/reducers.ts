@@ -1,17 +1,20 @@
 import { Action } from "../../types";
+import { CLEAR_MODERATION_LIST, PUSH_TO_MODERATION_LIST } from "./actions";
 import type { ModerationListsState } from "./type";
 
 const initialState: ModerationListsState = {
   data: [],
-  loading: false,
-  initialized: false,
 };
 
-export function moderationLists(
+export function moderationList(
   state = initialState,
   action: Action
 ): ModerationListsState {
   switch (action.type) {
+    case CLEAR_MODERATION_LIST:
+      return initialState;
+    case PUSH_TO_MODERATION_LIST:
+      return { data: [...state.data, ...action.payload] };
     default:
       return state;
   }

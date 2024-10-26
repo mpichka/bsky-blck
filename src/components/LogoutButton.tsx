@@ -7,7 +7,7 @@ import { isAuthorized, isUserLoading } from "../redux/modules/user/selectors";
 type PropsFromRedux = ConnectedProps<typeof connector>;
 type Props = PropsFromRedux;
 
-export function LogoutButtonComponent(props: Props) {
+function LogoutButtonComponent(props: Props) {
   const { isAuthorized, isLoading, logout } = props;
 
   if (!isAuthorized) return null;

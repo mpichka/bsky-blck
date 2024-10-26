@@ -175,4 +175,37 @@ export class Bsky {
       }
     );
   }
+
+  static async getSubscribedBlockList(
+    session: AuthenticationResponse,
+    cursor: string | undefined = undefined
+  ) {
+    return await fetch.get<ModerationListResponse>(
+      "https://bsky.social/xrpc/app.bsky.graph.getListBlocks",
+      {
+        authorization: session.accessJwt,
+        query: {
+          actor: session.did,
+          cursor,
+          limit: this.LIMIT,
+        },
+      }
+    );
+  }
+  static async getSubscribedMuteList(
+    session: AuthenticationResponse,
+    cursor: string | undefined = undefined
+  ) {
+    return await fetch.get<ModerationListResponse>(
+      "https://bsky.social/xrpc/app.bsky.graph.getListMutes",
+      {
+        authorization: session.accessJwt,
+        query: {
+          actor: session.did,
+          cursor,
+          limit: this.LIMIT,
+        },
+      }
+    );
+  }
 }

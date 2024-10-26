@@ -193,7 +193,7 @@ export interface List {
   cid: string;
   creator?: Creator;
   name: string;
-  purpose: string;
+  purpose: ListPurpose;
   description?: string;
   descriptionFacets?: DescriptionFacet[];
   avatar: string;
@@ -201,6 +201,12 @@ export interface List {
   labels: Label[];
   viewer: ListViewer;
   indexedAt: Date;
+}
+
+export enum ListPurpose {
+  "app.bsky.graph.defs#modlist" = "app.bsky.graph.defs#modlist",
+  "app.bsky.graph.defs#curatelist" = "app.bsky.graph.defs#curatelist",
+  "app.bsky.graph.defs#referencelist" = "app.bsky.graph.defs#referencelist",
 }
 
 export interface DescriptionFacet {

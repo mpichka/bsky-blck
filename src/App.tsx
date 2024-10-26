@@ -6,7 +6,7 @@ import Row from "react-bootstrap/Row";
 import { Counter } from "./components/Counter";
 import { LoginForm } from "./components/LoginForm";
 import { LogoutButton } from "./components/LogoutButton";
-import { LogsOutput } from "./components/Output";
+import { ModerationList } from "./components/ModerationList";
 import { SearchInput, SearchInputFormData } from "./components/SearchInput";
 import {
   AuthenticationResponse,
@@ -334,15 +334,13 @@ export default function App() {
         </Container>
       </Navbar>
       <LoginForm />
-      <SearchInput
-        isLoading={isLoading}
-        onSubmit={handleChainBlock}
-      />
+      <SearchInput isLoading={isLoading} onSubmit={handleChainBlock} />
       <Counter
         isLoading={isLoading}
         totalCount={totalCount.size}
         blockCount={blockCount.size}
       />
+      <ModerationList />
     </div>
   );
 }
