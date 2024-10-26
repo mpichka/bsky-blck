@@ -16,7 +16,7 @@ export interface SearchInputFormData {
   includeRepostFollowers: boolean;
   repeatForAuthor: boolean;
   actionType: string;
-  moderationList: string;
+  moderationListUri: string;
 }
 
 type PropsFromRedux = ConnectedProps<typeof connector>;
@@ -37,7 +37,7 @@ function SearchInputComponent(props: Props) {
     includeRepostFollowers: false,
     repeatForAuthor: false,
     actionType: "BLOCK",
-    moderationList: "NEW_LIST",
+    moderationListUri: "NEW_LIST",
   });
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -170,10 +170,10 @@ function SearchInputComponent(props: Props) {
         </Col>
         {formData.actionType === "ADD_TO_LIST" && (
           <Col>
-            <Form.Select id="moderationList" onChange={handleSelectChange}>
+            <Form.Select id="moderationListUri" onChange={handleSelectChange}>
               <option value="NEW_LIST">New list</option>
               {userModerationList.map((item) => (
-                <option value={item.cid} key={item.cid}>
+                <option value={item.uri} key={item.cid}>
                   {item.name}
                 </option>
               ))}

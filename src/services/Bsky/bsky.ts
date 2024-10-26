@@ -117,6 +117,18 @@ export class Bsky {
     );
   }
 
+  static async muteUser(did: string, session: AuthenticationResponse) {
+    return await fetch.post(
+      "https://bsky.social/xrpc/app.bsky.graph.muteActor",
+      {
+        authorization: session.accessJwt,
+        body: {
+          actor: did,
+        },
+      }
+    );
+  }
+
   static async createModerationList(session: AuthenticationResponse) {
     return await fetch.post<NewListResponse>(
       "https://bsky.social/xrpc/com.atproto.repo.createRecord",

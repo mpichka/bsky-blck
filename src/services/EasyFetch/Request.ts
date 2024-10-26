@@ -94,7 +94,7 @@ export class Request {
         error: null,
       };
     } else {
-      throw TypeError("Unexpected response type");
+      return { data: null, error: null };
     }
   }
 }

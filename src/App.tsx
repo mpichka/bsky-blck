@@ -3,20 +3,28 @@ import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
 import Row from "react-bootstrap/Row";
+import { connect, ConnectedProps } from "react-redux";
 import { Counter } from "./components/Counter";
 import { LoginForm } from "./components/LoginForm";
 import { LogoutButton } from "./components/LogoutButton";
 import { ModerationList } from "./components/ModerationList";
 import { SearchInput, SearchInputFormData } from "./components/SearchInput";
+import { getUserModerationList } from "./redux/modules/moderationList/selectors";
 import {
   AuthenticationResponse,
   AuthorResponse,
   Bsky,
+  List,
   Post,
 } from "./services/Bsky";
 import { parseSearchString } from "./utils/parseSearchString";
 
-export default function App() {
+type PropsFromRedux = ConnectedProps<typeof connector>;
+type Props = PropsFromRedux;
+
+function AppComponent(props: Props) {
+  const { userModerationList } = props;
+
   // Map<handle, did>
   const authorRef = useRef<AuthorResponse | null>(null);
   const authorPostRef = useRef<Post | null>(null);
@@ -29,6 +37,8 @@ export default function App() {
   const [blockCount, setBlockCount] = useState(new Set<string>());
   const [isLoading, setLoading] = useState(false);
   const [createBlockList, setCreateBlockList] = useState(false);
+  const [blockListUri, setBlockListUri] = useState("");
+  const [actionType, setActionType] = useState("BLOCK");
 
   useEffect(() => {
     if (!isLoading && totalCount.size && !blockCount.size) {
@@ -48,7 +58,9 @@ export default function App() {
   const handleChainBlock = async (formData: SearchInputFormData) => {
     setLoading(true);
     setTotalCount(new Set());
-    setCreateBlockList(formData.createBlockList);
+    setCreateBlockList(formData.actionType === "ADD_TO_LIST");
+    setBlockListUri(formData.moderationListUri);
+    setActionType(formData.actionType);
 
     if (!formData.linkToPost) {
       setLoading(false);
@@ -264,10 +276,19 @@ export default function App() {
       sessionStorage.getItem("session")!
     ) as AuthenticationResponse;
 
+    const actions = {
+      BLOCK: Bsky.blockUser,
+      MUTE: Bsky.muteUser,
+    };
+
+    const action = actions[actionType];
+
+    if (!action) return;
+
     console.log(`Blocking...`);
     for (const did of totalCount.values()) {
-      const blockRes = await Bsky.blockUser(did, session);
-      if (blockRes.data) {
+      const blockRes = await action(did, session);
+      if (!blockRes.error) {
         addToBlockCount(did);
       } else {
         console.error(blockRes.error);
@@ -285,28 +306,34 @@ export default function App() {
 
     console.log(`Creating block list...`);
 
-    const blockList = await Bsky.createModerationList(session);
+    let modList = userModerationList.find((item) => item.uri === blockListUri);
 
-    if (blockList.data) {
-      const listUri = blockList.data.uri;
+    if (!modList) {
+      const modListRes = await Bsky.createModerationList(session);
 
-      for (const did of totalCount.values()) {
-        const blockRes = await Bsky.addUserToTheModerationList(
-          did,
-          listUri,
-          session
-        );
-        if (blockRes.data) {
-          addToBlockCount(did);
-        } else {
-          console.error(blockRes.error);
-        }
+      if (modListRes.data) {
+        modList = modListRes.data as unknown as List;
+      } else {
+        console.error(modListRes.error);
+        return;
       }
-
-      console.log(`"${session.handle}'s moderation list" was created`);
-    } else {
-      return console.error(blockList.error);
     }
+
+    const listUri = modList.uri;
+    for (const did of totalCount.values()) {
+      const blockRes = await Bsky.addUserToTheModerationList(
+        did,
+        listUri,
+        session
+      );
+      if (blockRes.data) {
+        addToBlockCount(did);
+      } else {
+        console.error(blockRes.error);
+      }
+    }
+
+    console.log(`"${session.handle}'s moderation list" was created`);
 
     setLoading(false);
   }
@@ -334,3 +361,10 @@ export default function App() {
     </div>
   );
 }
+
+const mapStateToProps = (store) => ({
+  userModerationList: getUserModerationList(store),
+});
+
+const connector = connect(mapStateToProps);
+export const App = connector(AppComponent);
