@@ -27,7 +27,6 @@ export default function App() {
   const repostsFollowersRef = useRef(new Map<string, string>());
   const [totalCount, setTotalCount] = useState(new Set<string>());
   const [blockCount, setBlockCount] = useState(new Set<string>());
-  const [logs, setLogs] = useState("");
   const [isLoading, setLoading] = useState(false);
   const [createBlockList, setCreateBlockList] = useState(false);
 
@@ -37,14 +36,6 @@ export default function App() {
       else executeSimpleBlocks();
     }
   }, [isLoading, totalCount, createBlockList, blockCount]);
-
-  const log = (message: string) => {
-    setLogs((prevLog) => prevLog + message + "\n");
-  };
-
-  const logError = ({ error }) => {
-    setLogs((prevLog) => "ERROR: " + prevLog + error?.message || error + "\n");
-  };
 
   const addToTotalCount = (did: string) => {
     setTotalCount((previousState) => new Set([...previousState, did]));
@@ -57,12 +48,11 @@ export default function App() {
   const handleChainBlock = async (formData: SearchInputFormData) => {
     setLoading(true);
     setTotalCount(new Set());
-    setLogs(() => "");
     setCreateBlockList(formData.createBlockList);
 
     if (!formData.linkToPost) {
       setLoading(false);
-      return log("Search string is empty!");
+      return console.log("Search string is empty!");
     }
 
     await addAuthor(formData);
@@ -82,10 +72,10 @@ export default function App() {
   async function addAuthor(formData: SearchInputFormData) {
     const starterPoint = parseSearchString(formData.linkToPost);
 
-    log("Fetching author");
+    console.log("Fetching author");
     const authorRes = await Bsky.getAuthor(starterPoint.author);
     if (!authorRes.data) {
-      return logError(authorRes.error);
+      return console.error(authorRes.error);
     } else {
       authorRef.current = authorRes.data;
       addToTotalCount(authorRes.data.did);
@@ -97,7 +87,7 @@ export default function App() {
       formData.includeReposts ||
       formData.includeRepostFollowers
     ) {
-      log("Fetching author post");
+      console.log("Fetching author post");
       let cursor: string | undefined;
       while (true) {
         const postsRes = await Bsky.getAuthorFeed(
@@ -106,7 +96,7 @@ export default function App() {
         );
 
         if (!postsRes.data) {
-          logError(postsRes.error);
+          console.error(postsRes.error);
           break;
         } else {
           authorPostRef.current =
@@ -124,7 +114,7 @@ export default function App() {
 
   async function addAuthorFollowers() {
     if (authorRef.current) {
-      log("Fetching author followers");
+      console.log("Fetching author followers");
       let cursor: string | undefined;
       while (true) {
         const followersRes = await Bsky.getAuthorFollowers(
@@ -133,7 +123,7 @@ export default function App() {
         );
 
         if (followersRes.error) {
-          logError(followersRes.error);
+          console.error(followersRes.error);
           break;
         }
 
@@ -151,13 +141,13 @@ export default function App() {
   async function addPostLikes(post: Post | null) {
     if (!post) return;
 
-    log("Fetching post likes");
+    console.log("Fetching post likes");
     let cursor: string | undefined;
     while (true) {
       const postLikesRes = await Bsky.getPostLikes(post.uri, cursor);
 
       if (!postLikesRes.data) {
-        logError(postLikesRes.error);
+        console.error(postLikesRes.error);
         break;
       } else {
         postLikesRes.data.likes.forEach((like) => {
@@ -174,13 +164,13 @@ export default function App() {
   async function addPostReposts(post: Post | null) {
     if (!post) return;
 
-    log("Fetching post reposts");
+    console.log("Fetching post reposts");
     let cursor: string | undefined;
     while (true) {
       const postLikesRes = await Bsky.getPostReposts(post.uri, cursor);
 
       if (!postLikesRes.data) {
-        logError(postLikesRes.error);
+        console.error(postLikesRes.error);
         break;
       } else {
         postLikesRes.data.repostedBy.forEach((repost) => {
@@ -197,14 +187,14 @@ export default function App() {
   async function addPostLikesFollowers(post: Post | null) {
     if (!post) return;
 
-    log("Fetching post likes followers");
+    console.log("Fetching post likes followers");
     for (const userDid of postLikesRef.current.values()) {
       let cursor: string | undefined;
       while (true) {
         const followersRes = await Bsky.getAuthorFollowers(userDid, cursor);
 
         if (followersRes.error) {
-          logError(followersRes.error);
+          console.error(followersRes.error);
           break;
         }
 
@@ -222,14 +212,14 @@ export default function App() {
   async function addPostRepostsFollowers(post: Post | null) {
     if (!post) return;
 
-    log("Fetching post reposts followers");
+    console.log("Fetching post reposts followers");
     for (const userDid of postRepostRef.current.values()) {
       let cursor: string | undefined;
       while (true) {
         const followersRes = await Bsky.getAuthorFollowers(userDid, cursor);
 
         if (followersRes.error) {
-          logError(followersRes.error);
+          console.error(followersRes.error);
           break;
         }
 
@@ -249,11 +239,11 @@ export default function App() {
       const postsRes = await Bsky.getAuthorFeed(authorRef.current.did);
 
       if (!postsRes.data) {
-        logError(postsRes.error);
+        console.error(postsRes.error);
       } else {
         let counter = 1;
         for (const feed of postsRes.data.feed) {
-          log(`Repeating action... ${counter}/100`);
+          console.log(`Repeating action... ${counter}/100`);
 
           if (formData.includeLikes) await addPostLikes(feed.post);
           if (formData.includeReposts) await addPostReposts(feed.post);
@@ -274,13 +264,13 @@ export default function App() {
       sessionStorage.getItem("session")!
     ) as AuthenticationResponse;
 
-    log(`Blocking...`);
+    console.log(`Blocking...`);
     for (const did of totalCount.values()) {
       const blockRes = await Bsky.blockUser(did, session);
       if (blockRes.data) {
         addToBlockCount(did);
       } else {
-        logError(blockRes.error);
+        console.error(blockRes.error);
       }
     }
 
@@ -293,7 +283,7 @@ export default function App() {
       sessionStorage.getItem("session")!
     ) as AuthenticationResponse;
 
-    log(`Creating block list...`);
+    console.log(`Creating block list...`);
 
     const blockList = await Bsky.createModerationList(session);
 
@@ -309,13 +299,13 @@ export default function App() {
         if (blockRes.data) {
           addToBlockCount(did);
         } else {
-          logError(blockRes.error);
+          console.error(blockRes.error);
         }
       }
 
-      log(`"${session.handle}'s moderation list" was created`);
+      console.log(`"${session.handle}'s moderation list" was created`);
     } else {
-      return logError(blockList.error);
+      return console.error(blockList.error);
     }
 
     setLoading(false);
