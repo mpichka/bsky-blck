@@ -4,6 +4,8 @@ import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
+import { connect, ConnectedProps } from "react-redux";
+import { getUserModerationList } from "../redux/modules/moderationList/selectors";
 
 export interface SearchInputFormData {
   linkToPost: string;
@@ -13,17 +15,18 @@ export interface SearchInputFormData {
   includeLikesFollowers: boolean;
   includeRepostFollowers: boolean;
   repeatForAuthor: boolean;
-  createBlockList: boolean;
+  actionType: string;
+  moderationListUri: string;
 }
 
-type Props = {
-  isAuthenticated: boolean;
+type PropsFromRedux = ConnectedProps<typeof connector>;
+type Props = PropsFromRedux & {
   isLoading: boolean;
   onSubmit: (formData: SearchInputFormData) => void;
 };
 
-export function SearchInput(props: Props) {
-  const { isAuthenticated, isLoading, onSubmit } = props;
+function SearchInputComponent(props: Props) {
+  const { isLoading, onSubmit, userModerationList } = props;
 
   const [formData, setFormData] = useState<SearchInputFormData>({
     linkToPost: "",
@@ -33,7 +36,8 @@ export function SearchInput(props: Props) {
     includeLikesFollowers: false,
     includeRepostFollowers: false,
     repeatForAuthor: false,
-    createBlockList: false,
+    actionType: "BLOCK",
+    moderationListUri: "NEW_LIST",
   });
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -50,6 +54,53 @@ export function SearchInput(props: Props) {
       ...formData,
       [id]: checked,
     });
+  };
+
+  const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const { id, value } = e.target;
+    setFormData({
+      ...formData,
+      [id]: value,
+    });
+  };
+
+  const styledButton = () => {
+    if (formData.actionType === "BLOCK") {
+      return (
+        <Button
+          className="ms-1"
+          variant="danger"
+          onClick={() => onSubmit(formData)}
+          disabled={isLoading}
+        >
+          Block!
+        </Button>
+      );
+    }
+
+    if (formData.actionType === "MUTE") {
+      return (
+        <Button
+          className="ms-1"
+          variant="warning"
+          onClick={() => onSubmit(formData)}
+          disabled={isLoading}
+        >
+          Mute!
+        </Button>
+      );
+    }
+
+    return (
+      <Button
+        className="ms-1"
+        variant="primary"
+        onClick={() => onSubmit(formData)}
+        disabled={isLoading}
+      >
+        Start!
+      </Button>
+    );
   };
 
   return (
@@ -107,26 +158,37 @@ export function SearchInput(props: Props) {
             label="Repeat this action for the author's next 100 posts (very slow!)"
             onChange={handleCheckChange}
           />
-          <Form.Check
-            type="checkbox"
-            id="createBlockList"
-            label="Create a block list"
-            onChange={handleCheckChange}
-          />
         </Col>
       </Row>
-      <Row>
+      <Row className="mt-3">
         <Col>
-          <Button
-            className="mt-4"
-            variant="danger"
-            onClick={() => onSubmit(formData)}
-            disabled={!isAuthenticated || isLoading}
-          >
-            Block!
-          </Button>
+          <Form.Select id="actionType" onChange={handleSelectChange}>
+            <option value="BLOCK">Block</option>
+            <option value="MUTE">Mute</option>
+            <option value="ADD_TO_LIST">Add to moderation list</option>
+          </Form.Select>
         </Col>
+        {formData.actionType === "ADD_TO_LIST" && (
+          <Col>
+            <Form.Select id="moderationListUri" onChange={handleSelectChange}>
+              <option value="NEW_LIST">New list</option>
+              {userModerationList.map((item) => (
+                <option value={item.uri} key={item.cid}>
+                  {item.name}
+                </option>
+              ))}
+            </Form.Select>
+          </Col>
+        )}
+        <Col>{styledButton()}</Col>
       </Row>
     </Container>
   );
 }
+
+const mapStateToProps = (store) => ({
+  userModerationList: getUserModerationList(store),
+});
+
+const connector = connect(mapStateToProps);
+export const SearchInput = connector(SearchInputComponent);

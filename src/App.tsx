@@ -1,23 +1,29 @@
-import { type MutableRefObject, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
 import Row from "react-bootstrap/Row";
+import { connect, ConnectedProps } from "react-redux";
 import { Counter } from "./components/Counter";
 import { LoginForm } from "./components/LoginForm";
 import { LogoutButton } from "./components/LogoutButton";
-import { LogsOutput } from "./components/Output";
+import { ModerationList } from "./components/ModerationList";
 import { SearchInput, SearchInputFormData } from "./components/SearchInput";
+import { getUserModerationList } from "./redux/modules/moderationList/selectors";
 import {
   AuthenticationResponse,
   AuthorResponse,
   Bsky,
+  List,
   Post,
 } from "./services/Bsky";
 import { parseSearchString } from "./utils/parseSearchString";
 
-export default function App() {
-  const bskyRef: MutableRefObject<Bsky> = useRef(new Bsky());
+type PropsFromRedux = ConnectedProps<typeof connector>;
+type Props = PropsFromRedux;
+
+function AppComponent(props: Props) {
+  const { userModerationList } = props;
 
   // Map<handle, did>
   const authorRef = useRef<AuthorResponse | null>(null);
@@ -29,12 +35,10 @@ export default function App() {
   const repostsFollowersRef = useRef(new Map<string, string>());
   const [totalCount, setTotalCount] = useState(new Set<string>());
   const [blockCount, setBlockCount] = useState(new Set<string>());
-  const [logs, setLogs] = useState("");
-  const [isAuthenticated, setAuthenticated] = useState(
-    Boolean(sessionStorage.getItem("session"))
-  );
   const [isLoading, setLoading] = useState(false);
   const [createBlockList, setCreateBlockList] = useState(false);
+  const [blockListUri, setBlockListUri] = useState("");
+  const [actionType, setActionType] = useState("BLOCK");
 
   useEffect(() => {
     if (!isLoading && totalCount.size && !blockCount.size) {
@@ -42,14 +46,6 @@ export default function App() {
       else executeSimpleBlocks();
     }
   }, [isLoading, totalCount, createBlockList, blockCount]);
-
-  const log = (message: string) => {
-    setLogs((prevLog) => prevLog + message + "\n");
-  };
-
-  const logError = ({ error }) => {
-    setLogs((prevLog) => "ERROR: " + prevLog + error?.message || error + "\n");
-  };
 
   const addToTotalCount = (did: string) => {
     setTotalCount((previousState) => new Set([...previousState, did]));
@@ -62,12 +58,13 @@ export default function App() {
   const handleChainBlock = async (formData: SearchInputFormData) => {
     setLoading(true);
     setTotalCount(new Set());
-    setLogs(() => "");
-    setCreateBlockList(formData.createBlockList);
+    setCreateBlockList(formData.actionType === "ADD_TO_LIST");
+    setBlockListUri(formData.moderationListUri);
+    setActionType(formData.actionType);
 
     if (!formData.linkToPost) {
       setLoading(false);
-      return log("Search string is empty!");
+      return console.log("Search string is empty!");
     }
 
     await addAuthor(formData);
@@ -87,10 +84,10 @@ export default function App() {
   async function addAuthor(formData: SearchInputFormData) {
     const starterPoint = parseSearchString(formData.linkToPost);
 
-    log("Fetching author");
-    const authorRes = await bskyRef.current.getAuthor(starterPoint.author);
+    console.log("Fetching author");
+    const authorRes = await Bsky.getAuthor(starterPoint.author);
     if (!authorRes.data) {
-      return logError(authorRes.error);
+      return console.error(authorRes.error);
     } else {
       authorRef.current = authorRes.data;
       addToTotalCount(authorRes.data.did);
@@ -102,16 +99,16 @@ export default function App() {
       formData.includeReposts ||
       formData.includeRepostFollowers
     ) {
-      log("Fetching author post");
+      console.log("Fetching author post");
       let cursor: string | undefined;
       while (true) {
-        const postsRes = await bskyRef.current.getAuthorFeed(
+        const postsRes = await Bsky.getAuthorFeed(
           authorRef.current.did,
           cursor
         );
 
         if (!postsRes.data) {
-          logError(postsRes.error);
+          console.error(postsRes.error);
           break;
         } else {
           authorPostRef.current =
@@ -129,16 +126,16 @@ export default function App() {
 
   async function addAuthorFollowers() {
     if (authorRef.current) {
-      log("Fetching author followers");
+      console.log("Fetching author followers");
       let cursor: string | undefined;
       while (true) {
-        const followersRes = await bskyRef.current.getAuthorFollowers(
+        const followersRes = await Bsky.getAuthorFollowers(
           authorRef.current.did,
           cursor
         );
 
         if (followersRes.error) {
-          logError(followersRes.error);
+          console.error(followersRes.error);
           break;
         }
 
@@ -156,13 +153,13 @@ export default function App() {
   async function addPostLikes(post: Post | null) {
     if (!post) return;
 
-    log("Fetching post likes");
+    console.log("Fetching post likes");
     let cursor: string | undefined;
     while (true) {
-      const postLikesRes = await bskyRef.current.getPostLikes(post.uri, cursor);
+      const postLikesRes = await Bsky.getPostLikes(post.uri, cursor);
 
       if (!postLikesRes.data) {
-        logError(postLikesRes.error);
+        console.error(postLikesRes.error);
         break;
       } else {
         postLikesRes.data.likes.forEach((like) => {
@@ -179,16 +176,13 @@ export default function App() {
   async function addPostReposts(post: Post | null) {
     if (!post) return;
 
-    log("Fetching post reposts");
+    console.log("Fetching post reposts");
     let cursor: string | undefined;
     while (true) {
-      const postLikesRes = await bskyRef.current.getPostReposts(
-        post.uri,
-        cursor
-      );
+      const postLikesRes = await Bsky.getPostReposts(post.uri, cursor);
 
       if (!postLikesRes.data) {
-        logError(postLikesRes.error);
+        console.error(postLikesRes.error);
         break;
       } else {
         postLikesRes.data.repostedBy.forEach((repost) => {
@@ -205,17 +199,14 @@ export default function App() {
   async function addPostLikesFollowers(post: Post | null) {
     if (!post) return;
 
-    log("Fetching post likes followers");
+    console.log("Fetching post likes followers");
     for (const userDid of postLikesRef.current.values()) {
       let cursor: string | undefined;
       while (true) {
-        const followersRes = await bskyRef.current.getAuthorFollowers(
-          userDid,
-          cursor
-        );
+        const followersRes = await Bsky.getAuthorFollowers(userDid, cursor);
 
         if (followersRes.error) {
-          logError(followersRes.error);
+          console.error(followersRes.error);
           break;
         }
 
@@ -233,17 +224,14 @@ export default function App() {
   async function addPostRepostsFollowers(post: Post | null) {
     if (!post) return;
 
-    log("Fetching post reposts followers");
+    console.log("Fetching post reposts followers");
     for (const userDid of postRepostRef.current.values()) {
       let cursor: string | undefined;
       while (true) {
-        const followersRes = await bskyRef.current.getAuthorFollowers(
-          userDid,
-          cursor
-        );
+        const followersRes = await Bsky.getAuthorFollowers(userDid, cursor);
 
         if (followersRes.error) {
-          logError(followersRes.error);
+          console.error(followersRes.error);
           break;
         }
 
@@ -260,16 +248,14 @@ export default function App() {
 
   async function repeatForAuthor(formData: SearchInputFormData) {
     if (authorRef.current) {
-      const postsRes = await bskyRef.current.getAuthorFeed(
-        authorRef.current.did
-      );
+      const postsRes = await Bsky.getAuthorFeed(authorRef.current.did);
 
       if (!postsRes.data) {
-        logError(postsRes.error);
+        console.error(postsRes.error);
       } else {
         let counter = 1;
         for (const feed of postsRes.data.feed) {
-          log(`Repeating action... ${counter}/100`);
+          console.log(`Repeating action... ${counter}/100`);
 
           if (formData.includeLikes) await addPostLikes(feed.post);
           if (formData.includeReposts) await addPostReposts(feed.post);
@@ -290,13 +276,22 @@ export default function App() {
       sessionStorage.getItem("session")!
     ) as AuthenticationResponse;
 
-    log(`Blocking...`);
+    const actions = {
+      BLOCK: Bsky.blockUser,
+      MUTE: Bsky.muteUser,
+    };
+
+    const action = actions[actionType];
+
+    if (!action) return;
+
+    console.log(`Blocking...`);
     for (const did of totalCount.values()) {
-      const blockRes = await bskyRef.current.blockUser(did, session);
-      if (blockRes.data) {
+      const blockRes = await action(did, session);
+      if (!blockRes.error) {
         addToBlockCount(did);
       } else {
-        logError(blockRes.error);
+        console.error(blockRes.error);
       }
     }
 
@@ -309,30 +304,36 @@ export default function App() {
       sessionStorage.getItem("session")!
     ) as AuthenticationResponse;
 
-    log(`Creating block list...`);
+    console.log(`Creating block list...`);
 
-    const blockList = await bskyRef.current.createModerationList(session);
+    let modList = userModerationList.find((item) => item.uri === blockListUri);
 
-    if (blockList.data) {
-      const listUri = blockList.data.uri;
+    if (!modList) {
+      const modListRes = await Bsky.createModerationList(session);
 
-      for (const did of totalCount.values()) {
-        const blockRes = await bskyRef.current.addUserToTheModerationList(
-          did,
-          listUri,
-          session
-        );
-        if (blockRes.data) {
-          addToBlockCount(did);
-        } else {
-          logError(blockRes.error);
-        }
+      if (modListRes.data) {
+        modList = modListRes.data as unknown as List;
+      } else {
+        console.error(modListRes.error);
+        return;
       }
-
-      log(`"${session.handle}'s moderation list" was created`);
-    } else {
-      return logError(blockList.error);
     }
+
+    const listUri = modList.uri;
+    for (const did of totalCount.values()) {
+      const blockRes = await Bsky.addUserToTheModerationList(
+        did,
+        listUri,
+        session
+      );
+      if (blockRes.data) {
+        addToBlockCount(did);
+      } else {
+        console.error(blockRes.error);
+      }
+    }
+
+    console.log(`"${session.handle}'s moderation list" was created`);
 
     setLoading(false);
   }
@@ -342,37 +343,28 @@ export default function App() {
       <Navbar className="bg-body-tertiary mb-5" data-bs-theme="dark">
         <Container>
           <Navbar.Brand>Bluesky blockchain ⛓</Navbar.Brand>
-          {isAuthenticated && (
-            <Row>
-              <Col>
-                <LogoutButton
-                  isAuthenticated={isAuthenticated}
-                  setAuthenticated={setAuthenticated}
-                />
-              </Col>
-            </Row>
-          )}
+          <Row>
+            <Col>
+              <LogoutButton />
+            </Col>
+          </Row>
         </Container>
       </Navbar>
-
-      {!isAuthenticated && (
-        <LoginForm
-          authenticate={bskyRef.current.authenticate}
-          setAuthenticated={setAuthenticated}
-        />
-      )}
-
-      <SearchInput
-        isAuthenticated={isAuthenticated}
-        isLoading={isLoading}
-        onSubmit={handleChainBlock}
-      />
+      <LoginForm />
+      <SearchInput isLoading={isLoading} onSubmit={handleChainBlock} />
       <Counter
         isLoading={isLoading}
         totalCount={totalCount.size}
         blockCount={blockCount.size}
       />
-      <LogsOutput logs={logs} />
+      <ModerationList />
     </div>
   );
 }
+
+const mapStateToProps = (store) => ({
+  userModerationList: getUserModerationList(store),
+});
+
+const connector = connect(mapStateToProps);
+export const App = connector(AppComponent);
